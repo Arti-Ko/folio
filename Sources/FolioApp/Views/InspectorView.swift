@@ -41,6 +41,10 @@ private struct PageInspector: View {
 
     var body: some View {
         List {
+            if let node = snapshot.page(at: ref.path) {
+                PagePropertiesSection(ref: ref, node: node)
+            }
+
             Section("Содержание", isExpanded: $isOutlineExpanded) {
                 if navigation.outline.isEmpty {
                     placeholder("Заголовков нет")

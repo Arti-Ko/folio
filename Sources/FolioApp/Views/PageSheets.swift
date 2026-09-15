@@ -19,6 +19,7 @@ private struct NewPageForm: View {
 
     @Environment(LibraryModel.self) private var library
     @Environment(NavigationModel.self) private var navigation
+    @Environment(EditorModel.self) private var editor
     @Environment(\.dismiss) private var dismiss
     @State private var title = ""
     @State private var template: String?
@@ -65,6 +66,8 @@ private struct NewPageForm: View {
         do {
             let ref = try library.createPage(title: title, under: parent, template: template)
             navigation.open(ref)
+            // Новую страницу сразу открываем на правку, как в Confluence.
+            editor.begin(ref, library: library)
             dismiss()
         } catch {
             errorText = error.localizedDescription
@@ -77,6 +80,7 @@ private struct RenamePageForm: View {
 
     @Environment(LibraryModel.self) private var library
     @Environment(NavigationModel.self) private var navigation
+    @Environment(EditorModel.self) private var editor
     @Environment(\.dismiss) private var dismiss
     @State private var title = ""
     @State private var errorText: String?
@@ -119,7 +123,7 @@ private struct RenamePageForm: View {
 
     private func rename() {
         do {
-            let renamed = try library.renamePage(ref, to: title)
+            let renamed = try editor.rename(ref, to: title, library: library)
             if navigation.selection == ref {
                 navigation.relocate(to: renamed)
             }

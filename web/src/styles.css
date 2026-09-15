@@ -493,6 +493,343 @@ input[type='checkbox'] {
   font-size: var(--text-small);
 }
 
+/* Режим правки */
+
+.page.is-editing .ProseMirror {
+  min-height: 50vh;
+  caret-color: var(--accent);
+}
+
+.page.is-editing .page-body[data-empty='true']::before {
+  content: none;
+}
+
+.page.is-editing .page-title {
+  margin-inline: -6px;
+  padding-inline: 6px;
+  border-radius: var(--radius-small);
+  cursor: text;
+}
+
+.page.is-editing .page-title:hover {
+  background: var(--fill);
+}
+
+.page.is-editing .page-title:focus {
+  outline: none;
+  background: transparent;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.ProseMirror .is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+.page.is-editing .ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-small);
+}
+
+.page.is-editing .selectedCell {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.page.is-editing a,
+.page.is-editing .wiki-link {
+  cursor: text;
+}
+
+.page.is-editing .status {
+  cursor: pointer;
+}
+
+/* Панели и раскрывающиеся блоки при правке */
+
+.panel-controls,
+.expand-title-input {
+  display: none;
+}
+
+.page.is-editing .panel-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.page.is-editing .panel-title,
+.page.is-editing .expand-summary {
+  display: none;
+}
+
+.page.is-editing .expand-title-input,
+.page.is-editing .expand-content {
+  display: block;
+}
+
+.panel-swatch {
+  --swatch: var(--blue);
+  flex: none;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--swatch);
+  cursor: default;
+}
+
+.panel-swatch[aria-pressed='true'] {
+  box-shadow: 0 0 0 2px -apple-system-text-background, 0 0 0 3.5px var(--swatch);
+}
+
+.panel-swatch-note {
+  --swatch: var(--purple);
+}
+
+.panel-swatch-success {
+  --swatch: var(--green);
+}
+
+.panel-swatch-warning {
+  --swatch: var(--orange);
+}
+
+.panel-swatch-error {
+  --swatch: var(--red);
+}
+
+.panel-title-input,
+.expand-title-input {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: var(--radius-small);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+}
+
+.panel-title-input:focus,
+.expand-title-input:focus {
+  outline: none;
+  background: color-mix(in srgb, -apple-system-text-background 70%, transparent);
+}
+
+.panel-remove {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 20px;
+}
+
+.panel-remove:hover {
+  background: var(--fill-strong);
+  color: var(--text);
+}
+
+/* Всплывающие меню, окошки и панель форматирования */
+
+.folio-menu,
+.folio-popover,
+.folio-toolbar {
+  z-index: 1000;
+  border: 0.5px solid color-mix(in srgb, -apple-system-label 16%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, -apple-system-control-background 84%, transparent);
+  box-shadow:
+    0 12px 32px color-mix(in srgb, black 22%, transparent),
+    0 1px 3px color-mix(in srgb, black 12%, transparent);
+  color: var(--text);
+  font-size: var(--text-small);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+}
+
+.folio-menu,
+.folio-popover {
+  position: fixed;
+}
+
+.folio-menu {
+  width: 270px;
+  padding: 5px;
+  overflow-y: auto;
+}
+
+.folio-menu-group {
+  padding: 6px 8px 2px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.folio-menu-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: default;
+}
+
+.folio-menu-item[aria-selected='true'] {
+  background: var(--accent);
+  color: white;
+}
+
+.folio-menu-subtitle {
+  color: var(--text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.folio-menu-item[aria-selected='true'] .folio-menu-subtitle {
+  color: color-mix(in srgb, white 80%, transparent);
+}
+
+.folio-menu-empty {
+  padding: 6px 8px;
+  color: var(--text-tertiary);
+}
+
+.folio-toolbar {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+}
+
+.folio-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 26px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.folio-toolbar-button:hover {
+  background: var(--fill-strong);
+}
+
+.folio-toolbar-button[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+}
+
+.folio-toolbar-button.is-bold {
+  font-weight: 700;
+}
+
+.folio-toolbar-button.is-italic {
+  font-style: italic;
+  font-family: 'New York', Georgia, serif;
+}
+
+.folio-toolbar-button.is-strike {
+  text-decoration: line-through;
+}
+
+.folio-toolbar-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.folio-popover {
+  width: 300px;
+  padding: 12px;
+}
+
+.folio-popover-form {
+  display: grid;
+  gap: 10px;
+}
+
+.folio-field {
+  display: grid;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.folio-field input {
+  padding: 5px 8px;
+  border: 0.5px solid var(--separator);
+  border-radius: 6px;
+  background: -apple-system-text-background;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-small);
+}
+
+.folio-field input:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.folio-popover-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.folio-button {
+  padding: 3px 12px;
+  border: 0.5px solid var(--separator);
+  border-radius: 6px;
+  background: -apple-system-control-background;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-small);
+}
+
+.folio-button-primary {
+  border-color: transparent;
+  background: var(--accent);
+  color: white;
+}
+
+.folio-button-danger {
+  margin-right: auto;
+  color: var(--red);
+}
+
+.folio-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.folio-swatch {
+  border: 0;
+  cursor: default;
+}
+
+.folio-swatch[aria-pressed='true'] {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;

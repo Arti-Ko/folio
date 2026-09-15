@@ -49,6 +49,7 @@ final class NavigationModel {
     var pendingTrash: PageRef?
     /// Страница из ссылки `folio://open`, которая пришла раньше, чем её увидело дерево.
     var pendingOpen: PageRef?
+    var pendingOpenEditing = false
 
     var canGoBack: Bool { !backStack.isEmpty }
     var canGoForward: Bool { !forwardStack.isEmpty }

@@ -1,4 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core'
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
+import { element } from '../editor/dom'
 import { findDirectiveStart, serializeDirectiveAttributes, tokenizeDirective } from './directive'
 
 const EXPAND_NAMES = ['expand'] as const
@@ -36,42 +38,55 @@ export const Expand = Node.create({
   },
 
   addNodeView() {
-    return ({ node }) => {
-      const dom = document.createElement('div')
-      dom.className = 'expand'
+    return ({ node, editor, getPos }) => {
+      let current: ProseMirrorNode = node
+      const dom = element('div', 'expand')
       dom.dataset.type = 'expand'
 
-      const summary = document.createElement('button')
+      const header = element('div', 'expand-header')
+      header.contentEditable = 'false'
+      const summary = element('button', 'expand-summary')
       summary.type = 'button'
-      summary.className = 'expand-summary'
-      summary.contentEditable = 'false'
       summary.setAttribute('aria-expanded', 'false')
+      const titleInput = element('input', 'expand-title-input')
+      titleInput.type = 'text'
+      titleInput.placeholder = 'Заголовок блока'
+      header.append(summary, titleInput)
 
-      const content = document.createElement('div')
-      content.className = 'expand-content'
-
-      const applyTitle = (title: unknown) => {
-        summary.textContent = typeof title === 'string' && title ? title : DEFAULT_TITLE
-      }
-      applyTitle(node.attrs.title)
+      const content = element('div', 'expand-content')
 
       summary.addEventListener('click', (event) => {
         event.preventDefault()
         const isOpen = dom.classList.toggle('is-open')
         summary.setAttribute('aria-expanded', String(isOpen))
       })
+      titleInput.addEventListener('input', () => {
+        const position = getPos()
+        if (typeof position !== 'number') return
+        editor.view.dispatch(
+          editor.state.tr.setNodeMarkup(position, undefined, { ...current.attrs, title: titleInput.value }),
+        )
+      })
 
-      dom.append(summary, content)
+      const apply = (next: ProseMirrorNode) => {
+        current = next
+        const title = String(next.attrs.title ?? '')
+        summary.textContent = title || DEFAULT_TITLE
+        if (document.activeElement !== titleInput) titleInput.value = title
+      }
+      apply(node)
+
+      dom.append(header, content)
       return {
         dom,
         contentDOM: content,
         update: (next) => {
           if (next.type.name !== 'expand') return false
-          applyTitle(next.attrs.title)
+          apply(next)
           return true
         },
-        ignoreMutation: (mutation) =>
-          mutation.type !== 'selection' && (mutation.target === dom || summary.contains(mutation.target)),
+        stopEvent: (event) => header.contains(event.target as globalThis.Node),
+        ignoreMutation: (mutation) => mutation.type !== 'selection' && !content.contains(mutation.target),
       }
     }
   },

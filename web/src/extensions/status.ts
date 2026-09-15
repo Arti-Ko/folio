@@ -1,15 +1,10 @@
 import { Node } from '@tiptap/core'
+import { openStatusPopover } from '../editor/popover'
+import { normalizeStatusColor } from './statusColors'
 
-export const STATUS_COLORS = ['grey', 'blue', 'green', 'yellow', 'red', 'purple'] as const
-export type StatusColor = (typeof STATUS_COLORS)[number]
+export { STATUS_COLORS, normalizeStatusColor, type StatusColor } from './statusColors'
 
 const STATUS_PATTERN = /^\[status(?:\s+color="([a-z]+)")?\]([^[\]\n]*)\[\/status\]/
-
-export function normalizeStatusColor(value: unknown): StatusColor {
-  return typeof value === 'string' && (STATUS_COLORS as readonly string[]).includes(value)
-    ? (value as StatusColor)
-    : 'grey'
-}
 
 /** Статус Confluence внутри текста: `[status color="green"]Готово[/status]`. */
 export const Status = Node.create({
@@ -45,6 +40,36 @@ export const Status = Node.create({
 
   renderText({ node }) {
     return String(node.attrs.label)
+  },
+
+  addNodeView() {
+    return ({ node, editor, getPos }) => {
+      const dom = document.createElement('span')
+      const apply = (label: unknown, colorValue: unknown) => {
+        const color = normalizeStatusColor(colorValue)
+        dom.className = `status status-${color}`
+        dom.dataset.type = 'status'
+        dom.dataset.color = color
+        dom.textContent = String(label ?? '')
+      }
+      apply(node.attrs.label, node.attrs.color)
+
+      dom.addEventListener('click', (event) => {
+        const position = getPos()
+        if (!editor.isEditable || typeof position !== 'number') return
+        event.preventDefault()
+        openStatusPopover(editor, position, dom.getBoundingClientRect())
+      })
+
+      return {
+        dom,
+        update: (next) => {
+          if (next.type.name !== 'status') return false
+          apply(next.attrs.label, next.attrs.color)
+          return true
+        },
+      }
+    }
   },
 
   markdownTokenizer: {

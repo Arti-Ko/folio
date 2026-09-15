@@ -164,10 +164,11 @@ struct UpdatePresenter: ViewModifier {
     }
 }
 
+/// Получает Updater параметром: в меню приложения окружение SwiftUI доступно не всегда.
 struct CheckForUpdatesButton: View {
+    let updater: Updater
     var title = "Проверить обновления…"
 
-    @Environment(Updater.self) private var updater
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -210,7 +211,7 @@ struct UpdateSettings: View {
                             openWindow(id: WindowID.update)
                         }
                     } else {
-                        CheckForUpdatesButton(title: "Проверить сейчас")
+                        CheckForUpdatesButton(updater: updater, title: "Проверить сейчас")
                     }
                 } label: {
                     Text("Состояние")

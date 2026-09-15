@@ -10,10 +10,11 @@ struct FolioApplication: App {
 
     var body: some Scene {
         WindowGroup("Folio", id: WindowID.library) {
+            // Окружение задаётся последним: модификаторы выше по цепочке его не видят.
             ContentView()
+                .modifier(UpdatePresenter())
                 .environment(library)
                 .environment(updater)
-                .modifier(UpdatePresenter())
                 .onAppear {
                     appDelegate.terminationHandler = { [updater] in
                         updater.installPendingUpdateOnQuit()

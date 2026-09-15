@@ -9,8 +9,10 @@ public enum FolioPaths {
         return URL.applicationSupportDirectory.appending(path: "Folio", directoryHint: .isDirectory)
     }
 
+    /// Не в «Документах»: эту папку macOS защищает запросом доступа, и после каждого обновления
+    /// с новой подписью приложение ждало бы разрешения заново.
     public static var defaultSpacesFolder: URL {
-        URL.documentsDirectory.appending(path: "Folio", directoryHint: .isDirectory)
+        URL.homeDirectory.appending(path: "Folio", directoryHint: .isDirectory)
     }
 
     public static var registryURL: URL { supportFolder.appending(path: "spaces.json") }

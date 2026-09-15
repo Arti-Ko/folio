@@ -5,11 +5,11 @@ struct FolioCommands: Commands {
     let library: LibraryModel
     let updater: Updater
     @FocusedValue(\.navigation) private var navigation
+    @FocusedValue(\.editor) private var editor
 
     var body: some Commands {
         CommandGroup(after: .appInfo) {
-            CheckForUpdatesButton()
-                .environment(updater)
+            CheckForUpdatesButton(updater: updater)
         }
 
         CommandGroup(replacing: .newItem) {
@@ -37,6 +37,19 @@ struct FolioCommands: Commands {
         InspectorCommands()
 
         CommandMenu("Страница") {
+            Button(editor?.isEditing == true ? "Завершить правку" : "Редактировать") {
+                guard let editor, let navigation, let ref = navigation.selection else { return }
+                if editor.isEditing {
+                    editor.requestFinish()
+                } else if navigation.version == nil {
+                    editor.begin(ref, library: library)
+                }
+            }
+            .keyboardShortcut("e")
+            .disabled(navigation?.selection == nil || navigation?.version != nil)
+
+            Divider()
+
             Button("Переименовать…") {
                 if let navigation, let ref = navigation.selection { navigation.sheet = .rename(ref) }
             }

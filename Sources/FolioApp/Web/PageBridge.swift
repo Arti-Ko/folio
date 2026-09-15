@@ -35,6 +35,12 @@ enum BridgeMessage {
     case openURL(String)
     case outline([OutlineItem])
     case renderError(String)
+    case change(pageKey: String, markdown: String)
+    case state(FormattingState)
+    case renameTitle(pageKey: String, title: String)
+    case saveAttachment(id: String, name: String, data: String)
+    case pickAttachment
+    case notice(String)
 
     init?(body: Any) {
         guard let fields = body as? [String: Any], let type = fields["type"] as? String else { return nil }
@@ -57,6 +63,21 @@ enum BridgeMessage {
             self = .outline(items)
         case "renderError":
             self = .renderError(fields["message"] as? String ?? "")
+        case "change":
+            guard let key = fields["pageKey"] as? String, let markdown = fields["markdown"] as? String else { return nil }
+            self = .change(pageKey: key, markdown: markdown)
+        case "state":
+            self = .state(FormattingState(fields["state"] as? [String: Any] ?? [:]))
+        case "renameTitle":
+            guard let key = fields["pageKey"] as? String, let title = fields["title"] as? String else { return nil }
+            self = .renameTitle(pageKey: key, title: title)
+        case "saveAttachment":
+            guard let id = fields["id"] as? String, let data = fields["data"] as? String else { return nil }
+            self = .saveAttachment(id: id, name: fields["name"] as? String ?? "", data: data)
+        case "pickAttachment":
+            self = .pickAttachment
+        case "notice":
+            self = .notice(fields["message"] as? String ?? "")
         default:
             return nil
         }
@@ -74,6 +95,12 @@ struct PagePayload: Encodable, Sendable {
         let title: String
     }
 
+    struct PageEntry: Encodable, Sendable {
+        let space: String
+        let title: String
+    }
+
+    let pageKey: String
     let markdown: String
     let title: String
     let status: Status?
@@ -82,11 +109,14 @@ struct PagePayload: Encodable, Sendable {
     let assetBase: String
     let links: [String: Bool]
     let children: [Child]
+    let pages: [PageEntry]
+    let spaceName: String
     let banner: String?
     let resetScroll: Bool
+    let editable: Bool
 }
 
-/// Один WKWebView на окно: грузит веб-часть один раз и дальше только передаёт ей страницы.
+/// Один WKWebView на окно: грузит веб-часть один раз и дальше только передаёт ей страницы и команды.
 @MainActor
 final class PageBridge: NSObject {
     private(set) var webView: WKWebView?
@@ -114,19 +144,66 @@ final class PageBridge: NSObject {
 
     func render(_ payload: PagePayload) {
         lastPayload = payload
-        guard isReady else { return }
-        send(payload)
+        send(payload, function: "render")
+    }
+
+    /// Шапка и контекст без замены текста — во время правки, когда текст на диске совпадает с редактором.
+    func updateHeader(_ payload: PagePayload) {
+        lastPayload = payload
+        send(payload, function: "updateHeader")
+    }
+
+    func restoreHeader() {
+        if let lastPayload { send(lastPayload, function: "updateHeader") }
+    }
+
+    func setEditable(_ editable: Bool) {
+        call("window.folio.setEditable(editable)", ["editable": editable])
+    }
+
+    func setPageKey(_ key: String) {
+        call("window.folio.setPageKey(key)", ["key": key])
+    }
+
+    func run(_ name: String, arguments: [String: String] = [:]) {
+        call("window.folio.run(name, args)", ["name": name, "args": arguments])
     }
 
     func scrollToHeading(_ index: Int) {
-        webView?.callAsyncJavaScript("window.folio.scrollToHeading(index)", arguments: ["index": index], in: nil, in: .page)
+        call("window.folio.scrollToHeading(index)", ["index": index])
+    }
+
+    func attachmentSaved(id: String, item: AttachmentReply?) {
+        call("window.folio.attachmentSaved(id, item)", ["id": id, "item": item?.dictionary ?? NSNull()])
+    }
+
+    /// Текст редактора, если он ещё не отправлен; force — отдать в любом случае.
+    func takeMarkdown(force: Bool) async -> (pageKey: String, markdown: String)? {
+        guard isReady, let webView else { return nil }
+        return await withCheckedContinuation { continuation in
+            webView.callAsyncJavaScript(
+                "return window.folio.takeMarkdown(force)",
+                arguments: ["force": force],
+                in: nil,
+                in: .page
+            ) { result in
+                guard case .success(let value) = result,
+                      let fields = value as? [String: Any],
+                      let key = fields["pageKey"] as? String,
+                      let markdown = fields["markdown"] as? String else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                continuation.resume(returning: (key, markdown))
+            }
+        }
     }
 
     fileprivate func receive(_ message: BridgeMessage) {
         switch message {
         case .ready:
             isReady = true
-            if let lastPayload { send(lastPayload) }
+            if let lastPayload { send(lastPayload, function: "render") }
         case .renderError(let text):
             logger.error("Страница не отрисовалась: \(text, privacy: .public)")
         default:
@@ -134,13 +211,16 @@ final class PageBridge: NSObject {
         }
     }
 
-    private func send(_ payload: PagePayload) {
-        guard let webView,
-              let data = try? JSONEncoder().encode(payload),
-              let json = String(data: data, encoding: .utf8) else { return }
-        webView.callAsyncJavaScript("window.folio.render(JSON.parse(json))", arguments: ["json": json], in: nil, in: .page) { [logger] result in
+    private func send(_ payload: PagePayload, function: String) {
+        guard let data = try? JSONEncoder().encode(payload), let json = String(data: data, encoding: .utf8) else { return }
+        call("window.folio.\(function)(JSON.parse(json))", ["json": json])
+    }
+
+    private func call(_ script: String, _ arguments: [String: Any]) {
+        guard isReady, let webView else { return }
+        webView.callAsyncJavaScript(script, arguments: arguments, in: nil, in: .page) { [logger] result in
             if case .failure(let error) = result {
-                logger.error("render: \(error.localizedDescription, privacy: .public)")
+                logger.error("\(script, privacy: .public): \(error.localizedDescription, privacy: .public)")
             }
         }
     }

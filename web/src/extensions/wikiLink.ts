@@ -1,6 +1,8 @@
-import { Node } from '@tiptap/core'
+import { Node, nodeInputRule } from '@tiptap/core'
 
 const WIKI_LINK_PATTERN = /^\[\[([^[\]|\n]+?)(?:\|([^[\]\n]+?))?\]\]/
+// Без захватывающих групп: иначе nodeInputRule заменил бы только часть совпадения.
+const TYPED_WIKI_LINK = /\[\[(?:[^[\]|\n]+?)(?:\|(?:[^[\]\n]+?))?\]\]$/
 const SPACE_SEPARATOR = '::'
 
 export interface WikiTarget {
@@ -75,6 +77,20 @@ export const WikiLink = Node.create({
 
   renderText({ node }) {
     return String(node.attrs.label || node.attrs.title)
+  },
+
+  // Набранная вручную `[[Заголовок]]` сразу становится ссылкой.
+  addInputRules() {
+    return [
+      nodeInputRule({
+        find: TYPED_WIKI_LINK,
+        type: this.type,
+        getAttributes: (match) => {
+          const parts = WIKI_LINK_PATTERN.exec(match[0])
+          return parseWikiTarget(parts?.[1] ?? '', parts?.[2])
+        },
+      }),
+    ]
   },
 
   addNodeView() {

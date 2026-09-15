@@ -99,7 +99,7 @@ final class LibraryModel {
         await syncIndex([fresh])
     }
 
-    private func rescanNow(_ id: UUID) {
+    func rescanNow(_ id: UUID) {
         guard let space = snapshot(for: id)?.space else { return }
         let fresh = SpaceScanner.scan(space)
         replace(fresh)

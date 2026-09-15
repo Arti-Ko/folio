@@ -4,6 +4,7 @@ import SwiftUI
 struct ContentView: View {
     @Environment(LibraryModel.self) var library
     @State var navigation = NavigationModel()
+    @State var editor = EditorModel()
     @SceneStorage("selectedPage") private var storedSelection = ""
 
     var body: some View {
@@ -21,11 +22,14 @@ struct ContentView: View {
         }
         .toolbar { toolbarContent }
         .environment(navigation)
+        .environment(editor)
         .focusedSceneValue(\.navigation, navigation)
+        .focusedSceneValue(\.editor, editor)
         .sheet(item: $navigation.sheet) { sheet in
             PageSheetView(sheet: sheet)
                 .environment(library)
                 .environment(navigation)
+                .environment(editor)
         }
         .confirmationDialog(trashTitle, isPresented: isTrashConfirmationPresented, titleVisibility: .visible) {
             Button("Переместить в Корзину", role: .destructive, action: trashPendingPage)
@@ -42,15 +46,11 @@ struct ContentView: View {
             openPendingPage()
         }
         .onChange(of: library.contentRevision) { openPendingPage() }
-        .onOpenURL { url in
-            guard let ref = PageLink.ref(from: url) else { return }
-            navigation.searchText = ""
-            navigation.pendingOpen = ref
-            openPendingPage()
-        }
+        .onOpenURL(perform: handleOpenURL)
         .handlesExternalEvents(preferring: [PageLink.openHost], allowing: ["*"])
         .onChange(of: navigation.selection) { _, selection in
             storedSelection = selection.map { "\($0.spaceID.uuidString)\n\($0.path)" } ?? ""
+            editor.pageChanged(to: selection, library: library)
         }
     }
 
@@ -62,19 +62,51 @@ struct ContentView: View {
             Button("Вперёд", systemImage: "chevron.forward", action: navigation.goForward)
                 .disabled(!navigation.canGoForward)
         }
-        ToolbarItem(placement: .primaryAction) {
-            Button("Новая страница", systemImage: "square.and.pencil") {
-                if let parent = navigation.selection { navigation.sheet = .newPage(parent: parent) }
+
+        if editor.isEditing {
+            ToolbarItemGroup(placement: .primaryAction) {
+                EditorHistoryButtons()
+                EditorTextMenu()
+                EditorListMenu()
+                EditorInsertMenu()
+                EditorTableMenu()
             }
-            .help("Новая подстраница открытой страницы")
-            .disabled(navigation.selection == nil)
+            ToolbarItem(placement: .primaryAction) {
+                Button("Готово", systemImage: "checkmark") { editor.requestFinish() }
+                    .buttonStyle(.glassProminent)
+                    .help("Закончить правку и сохранить снимок в истории (⌘E)")
+            }
+        } else {
+            ToolbarItem(placement: .primaryAction) {
+                Button("Редактировать", systemImage: "pencil", action: startEditing)
+                    .disabled(!canEdit)
+                    .help("Редактировать страницу (⌘E)")
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button("Новая страница", systemImage: "square.and.pencil") {
+                    if let parent = navigation.selection { navigation.sheet = .newPage(parent: parent) }
+                }
+                .help("Новая подстраница открытой страницы")
+                .disabled(navigation.selection == nil)
+            }
         }
+
         ToolbarItem(placement: .primaryAction) {
             Button("Инспектор", systemImage: "sidebar.trailing") {
                 navigation.isInspectorPresented.toggle()
             }
             .help("Показать или скрыть инспектор")
         }
+    }
+
+    private var canEdit: Bool {
+        guard let ref = navigation.selection else { return false }
+        return navigation.version == nil && library.node(for: ref) != nil
+    }
+
+    private func startEditing() {
+        guard canEdit, let ref = navigation.selection else { return }
+        editor.begin(ref, library: library)
     }
 
     private var trashTitle: String {
@@ -95,6 +127,7 @@ struct ContentView: View {
         navigation.pendingTrash = nil
         let parentPath = ref.path.split(separator: "/").dropLast().joined(separator: "/")
         do {
+            if editor.editingRef == ref { editor.pageChanged(to: nil, library: library) }
             try library.trashPage(ref)
             if navigation.selection == ref {
                 navigation.open(PageRef(spaceID: ref.spaceID, path: parentPath))
@@ -161,7 +194,7 @@ struct WelcomeView: View {
         ContentUnavailableView {
             Label("Пространств пока нет", systemImage: "books.vertical")
         } description: {
-            Text("Создайте «Работу» и «Личное» в папке Документы › Folio или подключите готовую папку пространства.")
+            Text("Создайте «Работу» и «Личное» в папке Folio в вашей домашней папке или подключите готовую папку пространства.")
         } actions: {
             Button("Создать «Работу» и «Личное»") {
                 Task { await library.createDefaultSpaces() }

@@ -4,11 +4,18 @@ export interface ChildPageSummary {
   title: string
 }
 
-/** Данные о странице, которые знает только приложение: какие ссылки живые, дети, база вложений. */
+export interface PageSummary {
+  space: string
+  title: string
+}
+
+/** Данные, которые знает только приложение: живые ссылки, дети, база вложений, список страниц для подсказки. */
 export interface FolioContextStorage {
   links: Record<string, boolean>
   children: ChildPageSummary[]
   assetBase: string
+  pages: PageSummary[]
+  spaceName: string
 }
 
 declare module '@tiptap/core' {
@@ -21,6 +28,6 @@ export const FolioContext = Extension.create<Record<string, never>, FolioContext
   name: 'folioContext',
 
   addStorage() {
-    return { links: {}, children: [], assetBase: '' }
+    return { links: {}, children: [], assetBase: '', pages: [], spaceName: '' }
   },
 })
