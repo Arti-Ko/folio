@@ -144,6 +144,39 @@ describe('документ целиком', () => {
   })
 })
 
+describe('блоки [toc] и [children]', () => {
+  function nextFrames(): Promise<void> {
+    return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+  }
+
+  function blockText(editor: Editor, type: string): string {
+    return editor.view.dom.querySelector(`nav[data-type="${type}"]`)?.textContent ?? ''
+  }
+
+  it('оглавление обновляется, когда приложение показывает другую страницу', async () => {
+    const editor = editable('[toc]\n\n## Первая страница')
+    await nextFrames()
+    expect(blockText(editor, 'toc')).toContain('Первая страница')
+
+    // Приложение показывает страницу именно так: без события update, узел [toc] при этом переиспользуется.
+    editor.commands.setContent('[toc]\n\n## Вторая страница', { contentType: 'markdown', emitUpdate: false })
+    await nextFrames()
+    expect(blockText(editor, 'toc')).toContain('Вторая страница')
+    expect(blockText(editor, 'toc')).not.toContain('Первая страница')
+  })
+
+  it('список дочерних страниц берёт свежие данные приложения', async () => {
+    const editor = editable('[children]')
+    await nextFrames()
+    expect(blockText(editor, 'children')).toContain('Дочерних страниц нет')
+
+    editor.storage.folioContext.children = [{ title: 'Требования к офлайн-режиму' }]
+    editor.commands.setContent('[children]', { contentType: 'markdown', emitUpdate: false })
+    await nextFrames()
+    expect(blockText(editor, 'children')).toContain('Требования к офлайн-режиму')
+  })
+})
+
 describe('меню и адреса', () => {
   it('находит пункты меню «/» по началу слова', () => {
     expect(filterSlashItems('табл')[0]?.title).toBe('Таблица')
