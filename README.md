@@ -5,7 +5,7 @@
 <p align="center">Локальная вики в духе Confluence для macOS.<br>Страницы лежат Markdown-файлами у вас на диске, у каждого пространства своя история в git.</p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/v/release/Arti-Ko/folio?label=версия&color=0b8a6b" alt="Последний выпуск">
+  <a href="https://github.com/Arti-Ko/folio/releases/latest"><img src="https://img.shields.io/github/v/release/Arti-Ko/folio?label=%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D1%8F&color=0b8a6b" alt="Последний выпуск"></a>
   <img src="https://img.shields.io/badge/macOS-26%20Tahoe-1f1f1f" alt="macOS 26">
   <img src="https://img.shields.io/badge/Apple%20Silicon-arm64-1f1f1f" alt="Apple Silicon">
 </p>
